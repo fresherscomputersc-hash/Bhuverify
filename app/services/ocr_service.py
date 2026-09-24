@@ -114,6 +114,7 @@ class WordToken:
     line_no: int = 0
     word_no: int = 0
     script: str = "Latin"
+    page: int = 1  # 1-based PDF/image page the token was read from
 
 
 @dataclass

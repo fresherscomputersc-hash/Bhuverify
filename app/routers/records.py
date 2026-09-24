@@ -80,6 +80,11 @@ def record_dict(record: LandRecord, detail: bool = False) -> dict:
         "previous_owner": record.previous_owner,
         "new_owner": record.new_owner,
         "document_type": record.document_type_label,
+        "khewat_no": record.khewat_no,
+        "khatiyan_no": record.khatiyan_no,
+        "tehsil_no": record.tehsil_no,
+        "owners": record.owners_json or [],
+        "boundary": record.boundary_json or {},
         "status": record.status.value,
         "record_confidence": round(record.record_confidence, 2),
         "discrepancy_count": record.discrepancy_count,
@@ -113,6 +118,10 @@ def record_dict(record: LandRecord, detail: bool = False) -> dict:
                     "bbox": f.bbox,
                     "is_low_confidence": f.is_low_confidence,
                     "corrected_value": f.corrected_value,
+                    "status": f.status,
+                    "reason": f.reason,
+                    "method": f.method,
+                    "page": f.page,
                 }
                 for f in sorted(record.extractions, key=lambda x: x.id)
             ],

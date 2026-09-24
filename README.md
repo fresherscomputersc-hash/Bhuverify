@@ -156,12 +156,17 @@ The prototype deliberately keeps the same contracts the later tiers need:
 python3 -m pytest tests/ -q
 ```
 
-**83 tests** (`python -m pytest tests/ -q`). They cover:
+**94 tests** (`python -m pytest tests/ -q`). They cover:
 
 - unit conversion and area normalisation across acre/hectare/decimal/bigha/katha/guntha/kanal/marla
 - field extraction on official layouts (NIC table-ROR, Hindi ROR, khatauni tables):
   multi-pair line splitting, table-row owner/cell fallback, date-fragment
   rejection, ROR references, 5–6 digit khatas, खेसरा/गाटा/रकबा/किसम aliases
+- Odisha Schedule I Form 39-A contract: multi-page PDFs (admin+persons p1,
+  parcels p2), doc-type profile with prohibited identifiers (plot 417 is not
+  a khasra, khatiyan 18 is not a khata, case 4837/2025 is not a registration),
+  praja person parser (ପି:/ସ୍ୱା:/ଜା:/ବା:), directional boundary, per-field
+  extracted/missing/needs_review status, 39-A BR-1 required set
 - every one of BR-1 … BR-10, including the cases that must *not* fire
 - deskew accuracy verified against synthetic skews rather than assumed
 - real OCR of the generated demo pages, with a latency assertion against the SRS budget

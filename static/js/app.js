@@ -809,6 +809,7 @@
           [fieldsNode], actions),
         findingsPanel(record),
         crossDbPanel(record),
+        docSpecificPanel(record),
       ]),
     ]));
 
@@ -836,8 +837,42 @@
     return wrap;
   }
 
-  function fieldEditor(record) {
-    const canEdit = (state.user.permissions || []).indexOf("records:correct") !== -1;
+  function docSpecificPanel(record) {
+    // Odisha Form 39-A style identifiers, person list and directional
+    // boundary. Renders nothing when the document type carries none.
+    const rows = [];
+    [["Khewat No.", record.khewat_no], ["Khatiyan No.", record.khatiyan_no],
+     ["Tehsil No.", record.tehsil_no]].forEach(([label, val]) => {
+      if (val) rows.push(el("div", { class: "check" }, [
+        el("span", { class: "check-sys" }, [label]),
+        el("div", {}, [el("div", { class: "check-detail mono" }, [val])]),
+      ]));
+    });
+    (record.owners || []).forEach((o, i) => {
+      rows.push(el("div", { class: "check" }, [
+        el("span", { class: "check-sys" }, ["Person " + (i + 1)]),
+        el("div", {}, [
+          el("div", { class: "check-detail" }, [o.name || "—"]),
+          el("div", { class: "check-ref" }, [
+            o.relation_type ? o.relation_type + ": " + (o.relation_name || "—") : "relation not stated",
+          ]),
+        ]),
+      ]));
+    });
+    const boundary = record.boundary || {};
+    ["north", "south", "east", "west"].forEach((dir) => {
+      if (boundary[dir]) rows.push(el("div", { class: "check" }, [
+        el("span", { class: "check-sys" }, ["Boundary " + dir]),
+        el("div", {}, [el("div", { class: "check-detail" }, [boundary[dir]])]),
+      ]));
+    });
+    if (!rows.length) return null;
+    return panel("Document-specific fields",
+      "Identifiers and person list from the source form (never mapped into Khata/Khasra).",
+      [el("div", {}, rows)]);
+  }
+
+  function fieldEditor(record) {    const canEdit = (state.user.permissions || []).indexOf("records:correct") !== -1;
     const box = el("div", {});
     (record.fields || []).forEach((f) => {
       // Empty rows are rendered too (flagged "missing"): a field the AI

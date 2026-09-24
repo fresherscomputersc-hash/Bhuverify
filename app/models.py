@@ -155,6 +155,9 @@ class SourceDocument(Base):
     status: Mapped[DocumentStatus] = mapped_column(
         Enum(DocumentStatus), default=DocumentStatus.QUEUED, index=True
     )
+    # PDFs can carry the record across pages (39-A: page 1 admin + persons,
+    # page 2 parcels). The pipeline OCRs every page up to the worker cap.
+    page_count: Mapped[int] = mapped_column(Integer, default=1)
     progress_pct: Mapped[int] = mapped_column(Integer, default=0)
     error_message: Mapped[str] = mapped_column(Text, default="")
     ocr_engine: Mapped[str] = mapped_column(String(60), default="")
@@ -201,6 +204,10 @@ class LandRecord(Base):
     owner_name: Mapped[str] = mapped_column(String(200), default="", index=True)
     guardian_name: Mapped[str] = mapped_column(String(200), default="")
     address: Mapped[str] = mapped_column(String(300), default="")
+    # Odisha Form 39-A and friends keep person-level owners with relations
+    # (see services/extraction.parse_praja_section). The canonical
+    # owner_name holds the primary holder; the full list lives here.
+    owners_json: Mapped[dict] = mapped_column(JSON, default=list)
 
     # Area / classification
     area_value: Mapped[float] = mapped_column(Float, default=0.0)
@@ -218,6 +225,15 @@ class LandRecord(Base):
     previous_owner: Mapped[str] = mapped_column(String(200), default="")
     new_owner: Mapped[str] = mapped_column(String(200), default="")
     document_type_label: Mapped[str] = mapped_column(String(120), default="")
+    # Document-specific identifiers that are NOT canonical Khata/Khasra
+    # (Odisha 39-A: Khewat No, Khatiyan serial No, Tehsil No). Stored
+    # verbatim; never mapped into khata_no/khasra_no.
+    khewat_no: Mapped[str] = mapped_column(String(60), default="")
+    khatiyan_no: Mapped[str] = mapped_column(String(60), default="")
+    tehsil_no: Mapped[str] = mapped_column(String(60), default="")
+    # Directional boundary (chouhaddi): {north, south, east, west}; absent
+    # directions stay null rather than invented.
+    boundary_json: Mapped[dict] = mapped_column(JSON, default=dict)
 
     # Pipeline outcome
     status: Mapped[RecordStatus] = mapped_column(
@@ -270,6 +286,14 @@ class ExtractionResult(Base):
     page: Mapped[int] = mapped_column(Integer, default=1)
     is_low_confidence: Mapped[bool] = mapped_column(default=False, index=True)
     corrected_value: Mapped[str] = mapped_column(Text, default="")
+    # Per-field extraction status (spec section 7): extracted | missing |
+    # needs_review, plus a machine reason (field_not_present,
+    # canonical_field_not_explicitly_present, ocr_uncertain), the method that
+    # produced the value (label_value, table_row, pattern_sweep, ...) and the
+    # 1-based PDF page it came from.
+    status: Mapped[str] = mapped_column(String(20), default="extracted", index=True)
+    reason: Mapped[str] = mapped_column(String(60), default="")
+    method: Mapped[str] = mapped_column(String(40), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     record: Mapped[LandRecord] = relationship(back_populates="extractions")

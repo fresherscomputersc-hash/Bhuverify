@@ -40,7 +40,11 @@ from app.models import (
 )
 from app.services import audit
 from app.services.cv_preprocess import preprocess_image
-from app.services.extraction import classify_document_type, extract_fields, to_hectare
+from app.services.extraction import (
+    classify_document_type,
+    extract_multipage,
+    to_hectare,
+)
 from app.services.gis_service import link_record
 from app.services.ocr_service import crop_region, run_htr, run_ocr
 from app.services.validation import RecordContext, highest_severity, run_all_rules
@@ -62,10 +66,40 @@ _STOP = threading.Event()
 
 
 # ---------------------------------------------------------------------------
-# PDF handling
+# PDF handling (multi-page: Form 39-A spans admin+persons on page 1 and
+# parcels on page 2 - a first-page-only render silently drops page 2)
 # ---------------------------------------------------------------------------
+MAX_PDF_PAGES = 4
+
+
 def pdf_to_png(pdf_path: Path) -> Path:
     """Render the first PDF page to PNG (300 DPI) for the CV/OCR pipeline."""
+    return pdf_to_pngs(pdf_path, max_pages=1)[0]
+
+
+def pdf_to_pngs(pdf_path: Path, max_pages: int = MAX_PDF_PAGES) -> list[Path]:
+    """Render up to `max_pages` PDF pages to PNGs (300 DPI each)."""
+    try:  # pure-python wheel, works on Windows with no system packages
+        import pypdfium2 as pdfium  # type: ignore
+
+        pdf = pdfium.PdfDocument(str(pdf_path))
+        try:
+            out_paths = []
+            for index in range(min(len(pdf), max_pages)):
+                out_path = PROCESSED_DIR / f"{pdf_path.stem}_page{index + 1}.png"
+                pdf[index].render(scale=300 / 72).to_pil().save(str(out_path), "PNG")
+                out_paths.append(out_path)
+            if out_paths:
+                return out_paths
+        finally:
+            pdf.close()
+    except Exception:
+        pass
+    return [pdf_to_png_first(pdf_path)]
+
+
+def pdf_to_png_first(pdf_path: Path) -> Path:
+    """Single-page render via poppler / pdf2image (page 1 only)."""
     out_path = PROCESSED_DIR / f"{pdf_path.stem}_page1.png"
     try:  # pure-python wheel, works on Windows with no system packages
         import pypdfium2 as pdfium  # type: ignore
@@ -110,7 +144,7 @@ def pdf_to_png(pdf_path: Path) -> Path:
 # ---------------------------------------------------------------------------
 # OCR orchestration: printed OCR for the page, HTR for handwritten regions
 # ---------------------------------------------------------------------------
-def _ocr_document(enhanced_path: str, layout: dict, language: str) -> dict:
+def _ocr_document(enhanced_path: str, layout: dict, language: str, page: int = 1) -> dict:
     printed = run_ocr(enhanced_path, language=language, psm=4)
     if printed.word_count < 15:
         # Sparse layout (torn page, register with wide gaps): retry as sparse text.
@@ -143,6 +177,8 @@ def _ocr_document(enhanced_path: str, layout: dict, language: str) -> dict:
         })
 
     all_words = list(printed.words) + htr_words
+    for word in all_words:
+        word.page = page
     combined_text = printed.text
     if handwritten_parts:
         combined_text = printed.text + "\n\n" + "\n".join(
@@ -152,6 +188,7 @@ def _ocr_document(enhanced_path: str, layout: dict, language: str) -> dict:
     return {
         "text": combined_text.strip(),
         "words": all_words,
+        "page": page,
         "language": printed.language,
         "engine": "tesseract+opencv" if not handwritten_parts else "tesseract+opencv+htr",
         "mode": "printed+handwritten" if handwritten_parts else "printed",
@@ -166,6 +203,29 @@ def _ocr_document(enhanced_path: str, layout: dict, language: str) -> dict:
 # ---------------------------------------------------------------------------
 # The pipeline
 # ---------------------------------------------------------------------------
+def _merge_page_ocrs(page_ocrs: list[dict]) -> dict:
+    """Combine per-page OCR outputs into one document-level result."""
+    words = [w for page in page_ocrs for w in page["words"]]
+    parts = []
+    for page in page_ocrs:
+        marker = f"\n\n--- page {page.get('page', 1)} ---\n\n" if len(page_ocrs) > 1 else ""
+        parts.append(marker + page["text"])
+    confidences = [w.confidence for w in words]
+    engines = {p["engine"] for p in page_ocrs}
+    modes = {p["mode"] for p in page_ocrs}
+    return {
+        "text": "".join(parts).strip(),
+        "words": words,
+        "language": page_ocrs[0]["language"] if page_ocrs else "",
+        "engine": "+".join(sorted(engines)) if len(engines) > 1 else next(iter(engines), ""),
+        "mode": "+".join(sorted(modes)) if len(modes) > 1 else next(iter(modes), ""),
+        "mean_confidence": round(sum(confidences) / len(confidences), 2) if confidences else 0.0,
+        "word_count": len(words),
+        "low_confidence_words": sum(1 for c in confidences if c < settings.CONFIDENCE_MEDIUM),
+        "handwritten_regions": [h for p in page_ocrs for h in p["handwritten_regions"]],
+    }
+
+
 def process_document(document_id: int) -> dict:
     started = time.perf_counter()
     summary: dict = {"document_id": document_id}
@@ -191,18 +251,25 @@ def process_document(document_id: int) -> dict:
             db.commit()
 
             source_path = Path(document.stored_path)
-            image_path = source_path
             if source_path.suffix.lower() == ".pdf":
-                image_path = pdf_to_png(source_path)
+                page_images = pdf_to_pngs(source_path)
+            else:
+                page_images = [source_path]
 
             import uuid as _uuid_pre
 
             run_tag = _uuid_pre.uuid4().hex[:8]
-            pre = preprocess_image(image_path, tag=run_tag)
+            page_pres: list[dict] = []
+            for page_no, page_image in enumerate(page_images, start=1):
+                page_pre = preprocess_image(page_image, tag=f"{run_tag}p{page_no}")
+                page_pre["page"] = page_no
+                page_pres.append(page_pre)
+            pre = page_pres[0]
             # Drop the previous run's files: with unique names per run the
             # served files are immutable, so stale ones are just disk waste.
             for old in (document.enhanced_path, document.preview_path):
-                if old and old not in (pre["enhanced_path"], pre["preview_path"]):
+                if old and all(old != p["enhanced_path"] and old != p["preview_path"]
+                               for p in page_pres):
                     try:
                         Path(old).unlink(missing_ok=True)
                     except OSError:
@@ -210,12 +277,13 @@ def process_document(document_id: int) -> dict:
             document.enhanced_path = pre["enhanced_path"]
             document.preview_path = pre["preview_path"]
             document.layout_json = pre["layout"]
-            document.preprocessing_stats = pre["stats"]
+            document.preprocessing_stats = {**pre["stats"], "pages": len(page_pres)}
+            document.page_count = len(page_pres)
             audit.log_action(
                 db, ActionType.PREPROCESSING_DONE, actor_label="cv-service",
                 entity_type="document", entity_id=document.doc_id, document_id=document.id,
                 detail=(
-                    f"deskew {pre['stats']['deskew_angle_deg']}deg, "
+                    f"{len(page_pres)} page(s); p1 deskew {pre['stats']['deskew_angle_deg']}deg, "
                     f"contrast gain {pre['stats']['contrast_gain_pct']}%, "
                     f"{pre['stats']['region_total']} regions "
                     f"({pre['stats']['regions']})"
@@ -228,7 +296,11 @@ def process_document(document_id: int) -> dict:
             db.commit()
 
             ocr_started = time.perf_counter()
-            ocr = _ocr_document(pre["enhanced_path"], pre["layout"], document.language)
+            page_ocrs = [
+                _ocr_document(p["enhanced_path"], p["layout"], document.language, page=p["page"])
+                for p in page_pres
+            ]
+            ocr = _merge_page_ocrs(page_ocrs)
             document.ocr_text = ocr["text"]
             document.ocr_word_count = ocr["word_count"]
             document.ocr_mean_confidence = ocr["mean_confidence"]
@@ -236,12 +308,14 @@ def process_document(document_id: int) -> dict:
             document.ocr_language = ocr["language"]
             document.ocr_latency_ms = int((time.perf_counter() - ocr_started) * 1000)
             document.preprocessing_stats["handwritten_regions"] = ocr["handwritten_regions"]
+            document.preprocessing_stats["pages"] = len(page_pres)
             audit.log_action(
                 db, ActionType.OCR_EXECUTED, actor_label=ocr["engine"],
                 entity_type="document", entity_id=document.doc_id, document_id=document.id,
                 ai_confidence=ocr["mean_confidence"],
                 detail=(
-                    f"{ocr['word_count']} words, mean confidence {ocr['mean_confidence']:.1f}%, "
+                    f"{ocr['word_count']} words over {len(page_pres)} page(s), "
+                    f"mean confidence {ocr['mean_confidence']:.1f}%, "
                     f"mode {ocr['mode']}, lang {ocr['language']}, "
                     f"{document.ocr_latency_ms} ms"
                 ),
@@ -252,7 +326,7 @@ def process_document(document_id: int) -> dict:
             document.progress_pct = _STAGE_PROGRESS[DocumentStatus.EXTRACTING]
             db.commit()
 
-            outcome = extract_fields(ocr["text"], ocr["words"], language=ocr["language"])
+            outcome = extract_multipage(page_ocrs, language=ocr["language"])
             doc_type, doc_type_confidence = classify_document_type(outcome)
 
             record = document.record
@@ -336,12 +410,32 @@ def process_document(document_id: int) -> dict:
                     is_low_confidence=(
                         bool(extraction.value) and extraction.confidence < settings.CONFIDENCE_MEDIUM
                     ),
+                    status=extraction.status,
+                    reason=extraction.reason,
+                    method=extraction.method or extraction.source,
+                    page=extraction.page,
                 )
                 db.add(row)
             db.flush()
 
             if record.land_classification:
                 record.land_classification = canonical_classification(record.land_classification)
+
+            # Document-specific identifiers + person list + boundary.
+            def _dedicated_value(name: str) -> str:
+                entry = outcome.dedicated.get(name)
+                return entry.normalized_value if entry else ""
+
+            record.khewat_no = _dedicated_value("khewat_no")
+            record.khatiyan_no = _dedicated_value("khatiyan_no")
+            record.tehsil_no = _dedicated_value("tehsil_no")
+            record.owners_json = outcome.owners or []
+            record.boundary_json = outcome.boundary or {}
+            if outcome.owners and not record.owner_name:
+                record.owner_name = outcome.owners[0].get("name", "")
+            if outcome.owners and outcome.owners[0].get("relation_type") == "father" \
+                    and not record.guardian_name:
+                record.guardian_name = outcome.owners[0].get("relation_name", "")
 
             audit.log_action(
                 db, ActionType.FIELD_EXTRACTED, actor_label="extraction-service",

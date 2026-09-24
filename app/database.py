@@ -68,3 +68,41 @@ def init_db() -> None:
     from app import models  # noqa: F401  (register mappers)
 
     Base.metadata.create_all(bind=engine)
+    _ensure_columns()
+
+
+def _ensure_columns() -> None:
+    """Additive SQLite migration for existing prototype databases.
+
+    `create_all` never alters tables, so columns added in later versions
+    would crash live databases (Render) on first access. This adds the
+    missing ones in place; fresh databases already have them.
+    """
+    from sqlalchemy import inspect, text
+
+    wanted: dict[str, list[tuple[str, str]]] = {
+        "land_records": [
+            ("owners_json", "JSON"),
+            ("khewat_no", "VARCHAR(60)"),
+            ("khatiyan_no", "VARCHAR(60)"),
+            ("tehsil_no", "VARCHAR(60)"),
+            ("boundary_json", "JSON"),
+        ],
+        "extraction_results": [
+            ("status", "VARCHAR(20)"),
+            ("reason", "VARCHAR(60)"),
+            ("method", "VARCHAR(40)"),
+        ],
+        "source_documents": [
+            ("page_count", "INTEGER"),
+        ],
+    }
+    with engine.begin() as conn:
+        for table, columns in wanted.items():
+            try:
+                have = {col["name"] for col in inspect(conn).get_columns(table)}
+            except Exception:
+                continue
+            for name, ddl in columns:
+                if name not in have:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))

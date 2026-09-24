@@ -143,13 +143,15 @@ def _evidence_for(ctx: RecordContext, *field_names: str) -> dict:
 # BR-1  Mandatory field check
 # ---------------------------------------------------------------------------
 def br1_mandatory_fields(ctx: RecordContext) -> list[Discrepancy]:
-    from app.services.extraction import REQUIRED_FIELDS
+    from app.services.extraction import required_fields_for
 
-    missing = [name for name in REQUIRED_FIELDS if not ctx.value(name)]
+    required = required_fields_for(ctx.record.document_type_label or "")
+    missing = [name for name in required if not ctx.value(name)]
     if not missing:
         return []
     labels = {
         "owner_name": "Owner name", "khasra_no": "Khasra number", "khata_no": "Khata number",
+        "plot_no": "Plot number", "survey_no": "Survey number",
         "village": "Village", "tehsil": "Tehsil/Block", "district": "District",
         "area": "Land area", "land_classification": "Land classification",
     }
