@@ -195,7 +195,18 @@ def process_document(document_id: int) -> dict:
             if source_path.suffix.lower() == ".pdf":
                 image_path = pdf_to_png(source_path)
 
-            pre = preprocess_image(image_path)
+            import uuid as _uuid_pre
+
+            run_tag = _uuid_pre.uuid4().hex[:8]
+            pre = preprocess_image(image_path, tag=run_tag)
+            # Drop the previous run's files: with unique names per run the
+            # served files are immutable, so stale ones are just disk waste.
+            for old in (document.enhanced_path, document.preview_path):
+                if old and old not in (pre["enhanced_path"], pre["preview_path"]):
+                    try:
+                        Path(old).unlink(missing_ok=True)
+                    except OSError:
+                        pass
             document.enhanced_path = pre["enhanced_path"]
             document.preview_path = pre["preview_path"]
             document.layout_json = pre["layout"]

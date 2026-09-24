@@ -260,11 +260,19 @@ def _detect_map_regions(inverted: np.ndarray, gray: np.ndarray) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
-def preprocess_image(image_path: str | Path) -> dict:
+def preprocess_image(image_path: str | Path, tag: str | None = None) -> dict:
     """Run the full FR-2 pipeline on a document image.
 
     Returns the enhanced image path, an annotated preview path, the layout map
     and a dict of measured preprocessing statistics.
+
+    `tag` makes the output filenames unique per run (e.g. one UUID per
+    processing). This matters because the media endpoints serve these files
+    with FileResponse: Starlette declares Content-Length from a stat and then
+    streams the bytes, so rewriting the same path mid-download (reprocess
+    while a browser holds the preview open) corrupts the response with
+    "Response content longer than Content-Length". Unique names make every
+    served file immutable; the caller deletes the previous run's files.
     """
     image_path = Path(image_path)
     raw = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
@@ -291,8 +299,9 @@ def preprocess_image(image_path: str | Path) -> dict:
     layout = detect_layout(ocr_binary, ocr_ready, color=color_ready)
 
     stem = image_path.stem
-    enhanced_path = PROCESSED_DIR / f"{stem}_enhanced.png"
-    preview_path = PROCESSED_DIR / f"{stem}_annotated.png"
+    suffix = f"_{tag}" if tag else ""
+    enhanced_path = PROCESSED_DIR / f"{stem}_enhanced{suffix}.png"
+    preview_path = PROCESSED_DIR / f"{stem}_annotated{suffix}.png"
 
     cv2.imwrite(str(enhanced_path), ocr_ready)
 
