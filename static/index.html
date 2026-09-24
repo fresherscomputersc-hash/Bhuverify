@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BhuVerify — Intelligent Land Record Digitization and Validation</title>
+<link rel="stylesheet" href="/static/css/app.css" />
+</head>
+<body>
+<div id="app">
+  <div class="boot"><div class="boot-mark">BhuVerify</div><div class="boot-sub">loading workspace…</div></div>
+</div>
+
+<!-- Login -->
+<template id="tpl-login">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="brand">
+        <div class="brand-mark">भू</div>
+        <div>
+          <div class="brand-name">BhuVerify</div>
+          <div class="brand-sub">Intelligent Land Record Digitization &amp; Validation</div>
+        </div>
+      </div>
+      <div class="brand-meta">
+        <span>SIH26018</span><span>Smart Automation</span><span>Team Merge Conflict</span>
+      </div>
+      <p class="login-lead">
+        AI-assisted digitization of land records with a government reviewer holding final authority.
+        Sign in with a seeded role to explore the workflow.
+      </p>
+      <form id="login-form" autocomplete="off">
+        <label>Username
+          <input name="username" value="reviewer" required />
+        </label>
+        <label>Password
+          <input name="password" type="password" value="reviewer123" required />
+        </label>
+        <div class="login-error" id="login-error" hidden></div>
+        <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+      </form>
+      <div class="demo-accounts">
+        <div class="demo-title">Seeded demo accounts</div>
+        <div class="demo-grid" id="demo-grid"></div>
+      </div>
+      <div class="engine-note" id="engine-note"></div>
+    </div>
+  </div>
+</template>
+
+<!-- Shell -->
+<template id="tpl-shell">
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="side-brand">
+        <div class="brand-mark sm">भू</div>
+        <div>
+          <div class="side-name">BhuVerify</div>
+          <div class="side-tag">SIH26018</div>
+        </div>
+      </div>
+      <nav class="nav" id="nav"></nav>
+      <div class="side-foot">
+        <div class="side-user">
+          <div class="avatar" id="user-avatar"></div>
+          <div class="side-user-meta">
+            <div class="side-user-name" id="user-name"></div>
+            <div class="side-user-role" id="user-role"></div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="logout-btn">Sign out</button>
+        <div class="scope-note" id="scope-note"></div>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="page-title">Dashboard</h1>
+          <div class="page-sub" id="page-sub"></div>
+        </div>
+        <div class="topbar-right">
+          <button class="icon-btn" id="notif-btn" title="Notifications">
+            <span class="bell">&#9993;</span><span class="badge" id="notif-badge" hidden>0</span>
+          </button>
+          <div class="sys-pill" id="sys-pill"></div>
+        </div>
+      </header>
+      <div class="content" id="content"></div>
+    </main>
+  </div>
+  <div class="drawer" id="drawer" hidden>
+    <div class="drawer-head">
+      <span>Notifications</span>
+      <button class="icon-btn" id="drawer-close">&times;</button>
+    </div>
+    <div class="drawer-body" id="drawer-body"></div>
+  </div>
+</template>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>

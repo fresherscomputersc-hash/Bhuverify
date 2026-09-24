@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: bhuverify
+    runtime: docker
+    plan: free
+    region: singapore
+    healthCheckPath: /api/v1/health
+    dockerfilePath: ./Dockerfile
+    # Ephemeral disk: SQLite resets on restart and the app re-seeds its demo
+    # dataset automatically. Fine for the prototype demo, not for real data.
