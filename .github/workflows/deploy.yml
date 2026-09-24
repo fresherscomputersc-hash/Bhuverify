@@ -1,0 +1,40 @@
+name: Deploy BhuVerify to AWS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+
+            cd /home/ubuntu/Bhuverify
+
+            echo "Pulling latest code..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "Activating virtual environment..."
+            source /home/ubuntu/Bhuverify/venv/bin/activate
+
+            echo "Installing dependencies..."
+            pip install -r requirements.txt
+
+            echo "Restarting BhuVerify..."
+            sudo systemctl restart bhuverify
+
+            echo "Checking service..."
+            sudo systemctl is-active --quiet bhuverify
+
+            echo "BhuVerify deployment successful!"
