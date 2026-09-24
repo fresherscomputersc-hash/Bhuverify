@@ -78,7 +78,21 @@
     if (res.status === 401) { signOut(true); throw new Error("Session expired. Please sign in again."); }
     if (res.status === 204) return {};
     const text = await res.text();
-    const data = text ? JSON.parse(text) : {};
+    let data = {};
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch (err) {
+        // Proxy / gateway HTML pages (502/504 on long requests) are not JSON.
+        // Surface the status, not a parser SyntaxError.
+        throw new Error(
+          "Server did not return JSON (HTTP " + res.status + "). " +
+          (res.status >= 500
+            ? "The request probably timed out upstream - try queue mode instead of synchronous processing."
+            : "Unexpected response: " + text.slice(0, 120))
+        );
+      }
+    }
     if (!res.ok) throw new Error(data.detail || ("HTTP " + res.status));
     return data;
   }
@@ -262,6 +276,7 @@
     const [name, param] = hash.split("/");
     const target = name && VIEWS[name] && NAV.some((n) => n.name === name && allowed(n)) ? name : "dashboard";
     state.route = { name: target, param: param ? decodeURIComponent(param) : null };
+    if (state.refreshTimer) { clearInterval(state.refreshTimer); state.refreshTimer = null; }
 
     document.querySelectorAll(".nav-item").forEach((b) => {
       b.classList.toggle("active", b.getAttribute("data-route") === target);
@@ -463,7 +478,7 @@
       ["ori", "Odia only"],
     ].map(([v, label]) => el("option", { value: v }, [label])));
     const typeSel = el("select", {}, ["ror", "register_page", "mutation_record", "cadastral_map"].map((t) => el("option", { value: t }, [t])));
-    const syncChk = el("input", { type: "checkbox", checked: "checked", style: "width:auto;margin:0" });
+    const syncChk = el("input", { type: "checkbox", style: "width:auto;margin:0" });
     const batchInput = el("input", { placeholder: "e.g. Balarampur batch 1" });
     const result = el("div", {});
 
@@ -486,6 +501,11 @@
         files = [];
         renderList();
         toast("Batch " + data.batch_id + ": " + data.accepted.length + " accepted, " + data.skipped_duplicates.length + " duplicate(s) skipped.");
+        if (data.processing_mode === "queued") {
+          // async path: take the user to the live queue so they watch it finish
+          location.hash = "#/queue";
+          return;
+        }
         result.appendChild(uploadResult(data));
         refreshCounts();
       } catch (err) {
@@ -507,8 +527,9 @@
           submit,
         ]),
         el("p", { class: "small muted", style: "margin-top:12px" }, [
-          "Synchronous processing runs the full pipeline inline (preprocess → OCR/HTR → extraction → validation → GIS → queue) ",
-          "so results appear immediately. Queue mode uses the background worker, which is what production scales out.",
+          "Queue mode (recommended, especially on hosted deployments) processes in the background - ",
+          "watch progress on the Processing Queue page. Synchronous mode runs the full pipeline inside ",
+          "the upload request and can exceed the hosting proxy timeout on large/slow documents.",
         ]),
       ]),
       result,
@@ -571,6 +592,16 @@
     if (docId) {
       const doc = await api("/documents/" + docId);
       return el("div", { class: "grid" }, [documentDetail(doc), await recentDocsTable(docs)]);
+    }
+
+    // live refresh while anything is still moving through the pipeline
+    const inFlight = (docs.documents || []).some((d) => (
+      ["queued", "preprocessing", "ocr_running", "extracting", "validating"].indexOf(d.status) !== -1
+    ));
+    if (inFlight && !state.refreshTimer) {
+      state.refreshTimer = setInterval(() => {
+        if ((location.hash || "#/queue") === "#/queue") route();
+      }, 5000);
     }
 
     return el("div", { class: "grid" }, [
