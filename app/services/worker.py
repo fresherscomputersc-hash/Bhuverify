@@ -300,6 +300,24 @@ def process_document(document_id: int) -> dict:
                 _ocr_document(p["enhanced_path"], p["layout"], document.language, page=p["page"])
                 for p in page_pres
             ]
+            # Form 39-A (Odia): the combined eng+hin+ori pass recovers ~15%
+            # less Indic script than a dedicated Odia pass (measured on real
+            # Khatiyan scans). One extra ori pass per page, merged line-wise,
+            # only for this profile - Latin documents pay nothing.
+            from app.services.extraction import detect_profile as _detect_profile
+
+            if _detect_profile("\n".join(p["text"] for p in page_ocrs)) == "odisha_khatiyan_39a":
+                for page_ocr, page_pre in zip(page_ocrs, page_pres):
+                    second = run_ocr(page_pre["enhanced_path"], language="ori", psm=4)
+                    have = {ln.strip() for ln in page_ocr["text"].splitlines() if ln.strip()}
+                    extra = [ln for ln in second.text.splitlines()
+                             if ln.strip() and ln.strip() not in have]
+                    if extra:
+                        page_ocr["text"] = page_ocr["text"] + "\n" + "\n".join(extra)
+                        for word in second.words:
+                            word.page = page_ocr["page"]
+                        page_ocr["words"] = list(page_ocr["words"]) + list(second.words)
+                        page_ocr["engine"] = page_ocr["engine"] + "+ori-second-pass"
             ocr = _merge_page_ocrs(page_ocrs)
             document.ocr_text = ocr["text"]
             document.ocr_word_count = ocr["word_count"]

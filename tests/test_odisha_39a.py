@@ -143,3 +143,17 @@ def test_plot_sweep_ignores_mutation_case_numbers():
     # mutation cases and khatiyan serials must not leak into identifiers
     assert outcome.fields["khasra_no"].normalized_value == ""
     assert outcome.fields["mutation_no"].normalized_value == "4061/2000"
+
+
+def test_bare_plot_number_on_later_page():
+    from app.services.extraction import extract_fields
+
+    text = ("ଖେୱାଟ ନମ୍ବର 1\n"
+            "ଖତିୟାନର କ୍ରମିକ ନଂ : 18\n"
+            "ମୌଜା : ଗୋଠବଣ\n"
+            "417 ଘରବାରି\n"
+            "24/09/2026 IP :49.42.182.173")
+    outcome = extract_fields(text, [], language="ori", page=2)
+    assert outcome.fields["plot_no"].normalized_value == "417"
+    # the khatiyan serial on the same page must not become the plot
+    assert outcome.fields["plot_no"].normalized_value != "18"

@@ -602,13 +602,27 @@ def _value_after_label(line_text: str, aliases: list[str]) -> str:
     return tail.strip(" :：-.\\t|/\u00a6\u2502")
 
 
+def _is_artifact_text(value: str) -> bool:
+    """True for OCR debris rather than a value: table rules ("|"), stray
+    backticks, runs of "=" rulers, or strings with no letters/digits at all
+    ("?"). Genuine names and places never look like this."""
+    if not value:
+        return False
+    if "|" in value or "`" in value:
+        return True
+    if value.count("=") >= 3:
+        return True
+    return not any(ch.isalnum() for ch in value)
+
+
 def _looks_like_name(candidate: str) -> tuple[bool, float]:
     candidate = candidate.strip(" ,.:;-")
     if not candidate or len(candidate) < 3:
         return False, 0.0
     if DATE_HINT.search(candidate):
         return False, 0.0
-    tokens = [t for t in re.split(r"\s+", candidate) if t and t.lower() not in NAME_STOPWORDS]
+    tokens = [t for t in re.split(r"\s+", candidate)
+              if t and t.lower() not in NAME_STOPWORDS and any(ch.isalpha() for ch in t)]
     if not tokens:
         return False, 0.0
     indic = any(unicodedata.category(c[0]) == "Lo" for c in tokens if c)
@@ -678,15 +692,39 @@ PRAJA_END_HINT = re.compile(r"^\s*\d+\)")
 
 
 def parse_praja_section(raw_lines: list[str]) -> tuple[list[dict], str]:
-    """Parse the person list; return (owners, residence)."""
-    start = -1
-    for idx, line in enumerate(raw_lines):
-        lowered = line.lower()
-        if any(alias.lower() in lowered for alias in PRAJA_HEADER_ALIASES):
-            start = idx
-            break
-    if start < 0:
+    """Parse the person list; return (owners, residence).
+
+    Every praja header occurrence is parsed (multi-pass OCR appends a second,
+    better-read copy of the section further down) and the best parse wins:
+    most owners with an explicit relation first, then most owners.
+    """
+    starts = [
+        idx for idx, line in enumerate(raw_lines)
+        if any(alias.lower() in line.lower() for alias in PRAJA_HEADER_ALIASES)
+    ]
+    if not starts:
         return [], ""
+
+    best: tuple[list[dict], str] = ([], "")
+    best_score = (-1, -1)
+    for start in starts:
+        owners, residence = _parse_praja_from(raw_lines, start)
+        related = sum(1 for o in owners if o["relation_type"])
+        score = (related, len(owners))
+        if score > best_score:
+            best_score = score
+            best = (owners, residence)
+    if best[0]:
+        return best
+    # every parse came up empty: fall back to any residence found
+    for start in starts:
+        _owners, residence = _parse_praja_from(raw_lines, start)
+        if residence:
+            return [], residence
+    return [], ""
+
+
+def _parse_praja_from(raw_lines: list[str], start: int) -> tuple[list[dict], str]:
 
     first = raw_lines[start]
     cut = 0
@@ -708,12 +746,15 @@ def parse_praja_section(raw_lines: list[str]) -> tuple[list[dict], str]:
     addr_match = re.search(r"ବା:\s*([^,।\n\d]+)", section)
     if addr_match:
         residence = addr_match.group(1).strip(" ,.:;-")
+        if _is_artifact_text(residence) or len(residence) < 2:
+            residence = ""
 
     owners: list[dict] = []
     # split into person chunks on commas and dandas, keeping markers inline.
     # Chunks carrying table artifacts ("|", backticks) are layout noise, not
     # people - skipping them beats inventing an owner out of a rule character.
     chunks = [c.strip(" ,.:;-\t") for c in re.split(r"[,।]", section) if c.strip(" ,.:;-\t")]
+    seen: set[tuple[str, str]] = set()
     for chunk in chunks:
         if "|" in chunk or "`" in chunk:
             continue
@@ -748,6 +789,10 @@ def parse_praja_section(raw_lines: list[str]) -> tuple[list[dict], str]:
         name_ok, _name_score = _looks_like_name(name)
         if not name_ok:
             continue  # layout noise, not a person - never invent an owner
+        key = (name, relation_name if relation_type else "")
+        if key in seen:
+            continue  # same person read twice (multi-pass merge) - keep one
+        seen.add(key)
         confidence = 70.0 if len(name.split()) >= 2 else 55.0
         owners.append({
             "name": name,
@@ -873,10 +918,13 @@ def extract_fields(
             continue
 
         raw_value = raw_value.strip(" ,.:;-\t")
-        if field_name in NAME_LIKE_FIELDS and re.fullmatch(r"[\d\s/\-.,]+", raw_value or ""):
-            # A name is never a bare number ("Tehsil : 232" is the tehsil
-            # NUMBER line, not the tehsil). Leave it missing, honestly.
-            raw_value = ""
+        if field_name in NAME_LIKE_FIELDS:
+            if _is_artifact_text(raw_value) or len(raw_value) < 2:
+                raw_value = ""
+            elif re.fullmatch(r"[\d\s/\-.,]+", raw_value or ""):
+                # A name is never a bare number ("Tehsil : 232" is the tehsil
+                # NUMBER line, not the tehsil). Leave it missing, honestly.
+                raw_value = ""
         pattern = PATTERNS.get(field_name)
         pattern_strength = 0.0
         normalized = raw_value
@@ -913,8 +961,15 @@ def extract_fields(
                 # "S/o Late Balaram Sahoo" -> the relation prefix is the label
                 raw_value = re.sub(r"^(s/o|w/o|d/o|c/o)\s+", "", raw_value, flags=re.IGNORECASE)
             ok, name_score = _looks_like_name(raw_value)
-            pattern_strength = name_score if ok else name_score * 0.5
-            normalized = re.sub(r"\s+", " ", raw_value).title() if raw_value.isascii() else raw_value
+            if not ok:
+                # A name field that does not read like a name is layout noise
+                # ("? ????, ???? ? ..." off a mangled line). Keep the raw text
+                # as evidence but do not present it as the value.
+                pattern_strength = name_score * 0.5
+                normalized = ""
+            else:
+                pattern_strength = name_score
+                normalized = re.sub(r"\s+", " ", raw_value).title() if raw_value.isascii() else raw_value
         else:
             pattern_strength = 0.6 if raw_value else 0.0
 
@@ -1115,6 +1170,44 @@ def extract_fields(
             entry.status, entry.reason = "needs_review", "ocr_uncertain"
         dedicated[dedicated_name] = entry
 
+    # ---- bare-number plot fallback (Form 39-A page 2+, header lost) --------
+    # Parcel tables often lose their header in OCR while the number survives
+    # ("417" with no readable ପ୍ଲଟ label). A standalone ASCII 2-4 digit token
+    # on page 2+ is the plot - except when the same number already belongs to
+    # another identifier (khewat 1, khatiyan 18, mutation 4837/2025):
+    # identifiers are never shared. Years, dates and dotted IP fragments out.
+    if profile == DOC_PROFILE_ODISHA_39A and page >= 2 \
+            and not fields["plot_no"].normalized_value:
+        taken = {
+            (dedicated.get(name).normalized_value if dedicated.get(name) else "")
+            for name in ("khewat_no", "khatiyan_no", "tehsil_no")
+        }
+        for line in raw_lines:
+            for token in line.split():
+                token = token.strip("(),.:;-")
+                if not re.fullmatch(r"[0-9]{2,4}", token):
+                    continue
+                if token in taken:
+                    continue
+                if 1900 <= int(token) <= 2100:
+                    continue
+                if any(
+                    start <= line.find(token)
+                    and line.find(token) + len(token) <= end
+                    for start, end in (
+                        (m.start(), m.end()) for m in DATE_HINT.finditer(line)
+                    )
+                ):
+                    continue
+                fields["plot_no"].value = token[:200]
+                fields["plot_no"].normalized_value = token[:200]
+                fields["plot_no"].confidence = 62.0
+                fields["plot_no"].source = "pattern_sweep"
+                fields["plot_no"].evidence_text = line[:200]
+                break
+            if fields["plot_no"].normalized_value:
+                break
+
     # ---- person list + boundary (Form 39-A; harmless elsewhere) ------------
     owners, residence = parse_praja_section(raw_lines)
     address_field = fields.get("address")
@@ -1128,16 +1221,26 @@ def extract_fields(
         # The parsed person list is authoritative: it replaces whatever the
         # label pass made of the praja paragraph. (The parser only keeps
         # chunks that read like names, so the primary is trustworthy.)
+        # Confidence is capped inside needs_review: holder names are the
+        # highest-stakes field and Tesseract is confidently wrong on
+        # degraded scans, so a reviewer always confirms the holder.
+        # (The NIC-table owner path keeps its own scored confidence.)
+        for person in owners:
+            ocr_conf, _bbox = _ocr_confidence_for(person["name"], words)
+            if ocr_conf:
+                person["confidence"] = round(
+                    0.5 * person["confidence"] + 0.5 * ocr_conf, 2)
         primary = owners[0]
+        primary_conf = min(primary["confidence"], 69.9)
         fields["owner_name"].value = primary["name"][:200]
         fields["owner_name"].normalized_value = primary["name"][:200]
-        fields["owner_name"].confidence = primary["confidence"]
+        fields["owner_name"].confidence = primary_conf
         fields["owner_name"].source = "person_parser"
         fields["owner_name"].evidence_text = primary["name"][:200]
         if primary["relation_type"] == "father":
             fields["guardian_name"].value = primary["relation_name"][:200]
             fields["guardian_name"].normalized_value = primary["relation_name"][:200]
-            fields["guardian_name"].confidence = primary["confidence"]
+            fields["guardian_name"].confidence = primary_conf
             fields["guardian_name"].source = "person_parser"
     boundary = parse_boundary(raw_lines)
 
