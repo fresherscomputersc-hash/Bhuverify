@@ -45,6 +45,21 @@ def test_login_rejects_bad_credentials():
     assert r.status_code == 401
 
 
+def test_cookie_auth_covers_img_tags(db):
+    """Document previews load via <img>, which cannot send Authorization
+    headers - the API must accept the bhuverify_token cookie instead."""
+    _seed_user(db, "cookie_t", Role.REVIEWER)
+    r = client.post("/api/v1/auth/login",
+                    json={"username": "cookie_t", "password": "pw123456"})
+    assert r.status_code == 200
+    token = r.json()["token"]
+    client.cookies.set("bhuverify_token", token)
+    try:
+        assert client.get("/api/v1/auth/me").status_code == 200
+    finally:
+        client.cookies.clear()
+
+
 def test_rbac_operator_cannot_read_audit(db):
     _seed_user(db, "op_t", Role.OPERATOR)
     token = _login("op_t")

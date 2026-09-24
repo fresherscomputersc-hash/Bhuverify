@@ -135,6 +135,10 @@
         state.token = data.token;
         state.user = data.user;
         localStorage.setItem("bhuverify_token", data.token);
+        // Mirror the token into a cookie: <img> tags (document previews)
+        // cannot send Authorization headers, but the API also accepts the
+        // bhuverify_token cookie (see security._extract_token).
+        document.cookie = "bhuverify_token=" + data.token + "; Path=/; SameSite=Lax";
         await bootShell();
       } catch (err) {
         box.textContent = err.message;
@@ -175,6 +179,7 @@
     state.token = "";
     state.user = null;
     localStorage.removeItem("bhuverify_token");
+    document.cookie = "bhuverify_token=; Path=/; Max-Age=0";
     renderLogin();
     if (!silent) toast("Signed out.");
   }
@@ -205,6 +210,7 @@
     } catch (err) {
       state.token = "";
       localStorage.removeItem("bhuverify_token");
+      document.cookie = "bhuverify_token=; Path=/; Max-Age=0";
       renderLogin();
       return;
     }
