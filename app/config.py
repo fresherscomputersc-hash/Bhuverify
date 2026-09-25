@@ -57,7 +57,7 @@ class Settings:
     app_subtitle: str = "Intelligent Land Record Digitization and Validation System"
     problem_statement: str = "SIH26018"
     theme: str = "Smart Automation"
-    team: str = "Merge Conflict"
+    team: str = "Shadow Slayers"
     version: str = "0.1.0-prototype"
 
     database_url: str = field(
@@ -92,6 +92,24 @@ class Settings:
 
     # Continuous learning
     enable_correction_capture: bool = True
+
+    # Groq LLM verifier (optional, GitHub-safe tier).
+    # Disabled unless GROQ_API_KEY is set and GROQ_ENABLED=1.
+    # Text-only second pass: never replaces regex, only fills
+    # empty/low-confidence fields. No image bytes leave the server
+    # unless the operator enables it.
+    groq_enabled: bool = field(
+        default_factory=lambda: os.getenv("GROQ_ENABLED", "0") == "1"
+    )
+    groq_api_key: str = field(
+        default_factory=lambda: os.getenv("GROQ_API_KEY", "")
+    )
+    groq_model: str = field(
+        default_factory=lambda: os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    )
+    groq_timeout_s: float = field(
+        default_factory=lambda: float(os.getenv("GROQ_TIMEOUT_S", "5"))
+    )
 
 
 settings = Settings()

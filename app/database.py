@@ -19,7 +19,15 @@ class Base(DeclarativeBase):
     pass
 
 
-connect_args = {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
+# SQLite has a single writer lock shared by the request threads and the
+# background worker. The driver default waits only ~5 s before raising
+# "database is locked", which a multi-minute pipeline easily outlasts.
+# A 30 s busy-wait plus WAL keeps the prototype contention-free; the pilot
+# tier (PostgreSQL) removes the single-writer limit entirely.
+connect_args = (
+    {"check_same_thread": False, "timeout": 30}
+    if settings.database_url.startswith("sqlite") else {}
+)
 
 engine = create_engine(
     settings.database_url,
@@ -34,11 +42,40 @@ if settings.database_url.startswith("sqlite"):
     def _sqlite_pragmas(dbapi_connection, _record):  # pragma: no cover - infra glue
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA busy_timeout=30000")
+        cursor.execute("PRAGMA synchronous=NORMAL")
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
 
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False, future=True)
+
+
+def commit_with_retry(db: Session, attempts: int = 5) -> None:
+    """Commit, retrying transient SQLite writer-lock contention.
+
+    Even with a busy-timeout, a burst of concurrent writers (sync upload
+    running the full pipeline in-request while the worker processes the
+    queue) can still collide. Retries with linear backoff turn those into
+    slow commits instead of 500s. Only "database is locked" is retried;
+    anything else raises immediately.
+    """
+    import time
+
+    from sqlalchemy.exc import OperationalError
+
+    delay = 0.2
+    for attempt in range(attempts):
+        try:
+            db.commit()
+            return
+        except OperationalError as exc:
+            if "locked" not in str(exc).lower() or attempt == attempts - 1:
+                raise
+            db.rollback()
+            time.sleep(delay)
+            delay += 0.2
+    raise RuntimeError("unreachable")  # pragma: no cover - loop always returns/raises
 
 
 def get_db() -> Iterator[Session]:
@@ -56,7 +93,7 @@ def session_scope() -> Iterator[Session]:
     db = SessionLocal()
     try:
         yield db
-        db.commit()
+        commit_with_retry(db)
     except Exception:
         db.rollback()
         raise

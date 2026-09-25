@@ -112,7 +112,9 @@ def log_action(
         # visibility still requires commit (see note on _CHAIN_LOCK).
         db.flush()
         if commit:
-            db.commit()
+            from app.database import commit_with_retry
+
+            commit_with_retry(db)
             db.refresh(entry)
         return entry
 

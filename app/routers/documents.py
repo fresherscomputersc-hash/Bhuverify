@@ -18,6 +18,7 @@ from app.models import (
     AuditLog,
     Batch,
     DocumentStatus,
+    RecordStatus,
     SourceDocument,
     User,
     iso_utc,
@@ -30,6 +31,19 @@ router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
 
 def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def _retry_allowed(existing: SourceDocument) -> bool:
+    """A same-bytes re-upload is accepted when the previous attempt is dead:
+    its record was rejected, or the document itself failed processing.
+    Anything still live (queued through approved) keeps the dedup skip, and
+    the superseded document stays in the repository for the audit trail."""
+    if existing.status == DocumentStatus.FAILED:
+        return True
+    record = existing.record
+    if record is not None and record.status == RecordStatus.REJECTED:
+        return True
+    return False
 
 
 def document_dict(document: SourceDocument, include_ocr: bool = False) -> dict:
@@ -106,7 +120,7 @@ async def upload_documents(
         existing = db.execute(
             select(SourceDocument).where(SourceDocument.file_hash == file_hash)
         ).scalar_one_or_none()
-        if existing:
+        if existing and not _retry_allowed(existing):
             skipped.append({
                 "filename": filename,
                 "reason": "duplicate_file_hash",

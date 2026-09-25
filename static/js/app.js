@@ -693,8 +693,32 @@
         el("h4", { style: "margin:16px 0 6px" }, ["Raw OCR text"]),
         el("pre", { class: "mono small", style: "background:#fbfcfd;border:1px solid var(--line-2);border-radius:8px;padding:10px;white-space:pre-wrap;max-height:220px;overflow:auto" }, [doc.ocr_text || "(none)"]),
         (doc.audit_trail || []).length ? timeline(doc.audit_trail.slice(0, 10)) : null,
-      ]),
+      ], reprocessActions(doc)),
     ]);
+  }
+
+  function reprocessActions(doc) {
+    // Same-file retry without re-uploading: reruns the pipeline on the
+    // stored bytes (picks up extractor fixes). Upload of identical bytes
+    // is still dedup-skipped unless the previous attempt died.
+    if ((state.user.permissions || []).indexOf("documents:upload") === -1) return [];
+    return [el("button", {
+      class: "btn",
+      onclick: async (ev) => {
+        const btn = ev.target;
+        btn.disabled = true;
+        btn.textContent = "Reprocessing…";
+        try {
+          await api("/documents/" + doc.doc_id + "/process", { method: "POST" });
+          toast("Reprocessing started - watch the queue.");
+          route();
+        } catch (err) {
+          toast(err.message, true);
+          btn.disabled = false;
+          btn.textContent = "Reprocess";
+        }
+      },
+    }, ["Reprocess"])];
   }
 
   function timeline(entries) {

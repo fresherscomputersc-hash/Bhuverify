@@ -30,17 +30,19 @@ API = os.getenv("BHUVERIFY_API", "http://localhost:8000")
 OUT = Path(__file__).resolve().parent.parent / "BhuVerify_SIH26018_Pitch_Deck.pptx"
 PAGE_BOTTOM = Inches(6.95)  # nothing may be placed below this line
 
-# --- palette ---------------------------------------------------------------
+# --- palette: Government of India theme ------------------------------------
+# Navy blue (primary), saffron (accent), India green kept for ok-states via
+# existing greens; red retained for critical/high severity semantics.
 INK = RGBColor(0x16, 0x20, 0x2E)
 INK_2 = RGBColor(0x4A, 0x5A, 0x70)
 INK_3 = RGBColor(0x7B, 0x87, 0x98)
-BRAND = RGBColor(0x0F, 0x5C, 0x4A)
-BRAND_2 = RGBColor(0x14, 0x79, 0x5F)
-BRAND_SOFT = RGBColor(0xE6, 0xF2, 0xEE)
-GOLD = RGBColor(0xB8, 0x86, 0x0B)
+BRAND = RGBColor(0x0A, 0x3D, 0x91)
+BRAND_2 = RGBColor(0x06, 0x2A, 0x63)
+BRAND_SOFT = RGBColor(0xE8, 0xEF, 0xFA)
+GOLD = RGBColor(0xD9, 0x77, 0x06)
 RED = RGBColor(0xB0, 0x2A, 0x37)
 RED_2 = RGBColor(0xD0, 0x60, 0x6E)
-BLUE = RGBColor(0x5A, 0x8D, 0xC0)
+BLUE = RGBColor(0x1E, 0x5A, 0xA8)
 WHITE = RGBColor(0xFF, 0xFF, 0xFF)
 PANEL = RGBColor(0xF7, 0xF9, 0xFB)
 LINE = RGBColor(0xE2, 0xE8, 0xF0)
@@ -152,7 +154,7 @@ def header(s, title, subtitle=None, kicker=None):
         text(s, 0.6, 0.86, 11.9, 0.3, subtitle, size=12, color=INK_3)
 
 
-def footer(s, page, note="BhuVerify · SIH26018 · Team Merge Conflict"):
+def footer(s, page, note="BhuVerify · SIH26018 · Team Shadow Slayers"):
     text(s, 0.6, 7.05, 9, 0.25, note, size=9, color=INK_3)
     text(s, 11.8, 7.05, 1, 0.25, str(page), size=9, color=INK_3, align=PP_ALIGN.RIGHT)
 
@@ -218,7 +220,7 @@ def s01_title(prs, m):
         {"text": "Smart Automation", "size": 13, "color": RGBColor(0x8F, 0xC9, 0xB8)},
         {"text": " ", "size": 8},
         {"text": "Team", "size": 11, "color": RGBColor(0x6F, 0xA8, 0x97)},
-        {"text": "Merge Conflict", "size": 15, "color": WHITE, "bold": True},
+        {"text": "Shadow Slayers", "size": 15, "color": WHITE, "bold": True},
     ])
 
     text(s, 5.3, 1.75, 7.4, 1.2, "BhuVerify", size=58, color=WHITE, bold=True)
@@ -417,7 +419,7 @@ def s06_demo(prs, m):
         ("Avg pipeline", f"{perf['average_pipeline_latency_ms']/1000:.1f}s", f"budget 10s · slowest {perf['slowest_document_ms']/1000:.1f}s", GOLD),
         ("Audit events", f"{d['audit']['events']}", "hash-chained, tamper-evident", BRAND_2),
         ("Corrections captured", f"{d['learning']['corrections_captured']}", "labeled AI→human pairs for fine-tuning", BRAND_2),
-        ("Test suite", "101", "passing, incl. all 10 rules", BRAND_2),
+        ("Test suite", "99", "passing, incl. all 10 rules", BRAND_2),
     ]
     for index, (label, value, foot, tone) in enumerate(cards):
         row, column = divmod(index, 4)
@@ -696,7 +698,7 @@ def s12_close(prs, m):
         text(s, 3.5, y + 0.02, 9.2, 0.4, detail, size=12.5, color=RGBColor(0xC9, 0xE4, 0xDB))
 
     text(s, 0.6, 6.62, 12, 0.35,
-         "SIH26018 · Smart Automation · Team Merge Conflict · working prototype available for "
+         "SIH26018 · Smart Automation · Team Shadow Slayers · working prototype available for "
          "live demonstration", size=11.5, color=RGBColor(0x8F, 0xC9, 0xB8))
 
 

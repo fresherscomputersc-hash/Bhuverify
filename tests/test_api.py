@@ -103,6 +103,62 @@ def test_system_status_requires_auth():
     assert r.status_code == 401
 
 
+def test_reupload_allowed_after_reject(db):
+    """Same bytes are dedup-skipped while live, but accepted again once the
+    previous attempt died (record rejected)."""
+    import io
+    import uuid
+
+    from PIL import Image
+
+    from app.models import DocumentStatus, RecordStatus, SourceDocument
+
+    _seed_user(db, "opu_t", Role.OPERATOR)
+    token = _login("opu_t")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    buf = io.BytesIO()
+    Image.new("RGB", (120, 60), "white").save(buf, "PNG")
+    payload = buf.getvalue()
+
+    def _upload(sync="true"):
+        return client.post(
+            "/api/v1/documents",
+            files={"files": ("retry.png", io.BytesIO(payload), "image/png")},
+            data={"doc_type": "ror", "language": "eng", "process_sync": sync},
+            headers=headers,
+        )
+
+    # synchronous: returns after the full pipeline, so the record exists
+    r1 = _upload("true")
+    assert r1.status_code == 200, r1.text
+    assert len(r1.json()["accepted"]) == 1
+    doc_id = r1.json()["accepted"][0]
+
+    r2 = _upload()
+    assert r2.status_code == 200
+    assert len(r2.json()["skipped_duplicates"]) == 1
+
+    from sqlalchemy import select
+
+    from app.database import SessionLocal
+
+    with SessionLocal() as s:
+        doc = s.execute(
+            select(SourceDocument).where(SourceDocument.doc_id == doc_id)
+        ).scalar_one()
+        assert doc.record is not None
+        doc.record.status = RecordStatus.REJECTED
+        doc.status = DocumentStatus.COMPLETED
+        s.commit()
+
+    r3 = _upload()
+    assert r3.status_code == 200, r3.text
+    assert len(r3.json()["accepted"]) == 1, r3.json()
+    assert r3.json()["accepted"][0] != doc_id
+    assert len(r3.json()["skipped_duplicates"]) == 0
+
+
 def test_correction_revalidates_and_unblocks_approve(db):
     """Filling the missing mandatory fields must clear BR-1 so approve works."""
     import uuid

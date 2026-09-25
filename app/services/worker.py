@@ -345,6 +345,21 @@ def process_document(document_id: int) -> dict:
             db.commit()
 
             outcome = extract_multipage(page_ocrs, language=ocr["language"])
+            groq_applied: list[str] = []
+            try:
+                from app.services import llm_groq as _groq
+
+                outcome, groq_applied = _groq.enhance_outcome(ocr["text"], outcome)
+                if groq_applied:
+                    audit.log_action(
+                        db, ActionType.FIELD_EXTRACTED, actor_label="groq-llm-verifier",
+                        entity_type="document", entity_id=document.doc_id,
+                        document_id=document.id,
+                        detail=f"Groq filled {len(groq_applied)} field(s): "
+                               f"{', '.join(sorted(groq_applied))}",
+                    )
+            except Exception:
+                groq_applied = []
             doc_type, doc_type_confidence = classify_document_type(outcome)
 
             record = document.record

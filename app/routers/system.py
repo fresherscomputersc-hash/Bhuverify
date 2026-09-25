@@ -13,6 +13,7 @@ from app.models import ActionType, Role, User
 from app.services import audit, notifications
 from app.services.external_adapters import adapter_status
 from app.services.gis_service import layer
+from app.services.llm_groq import status as llm_status
 from app.services.ocr_service import engine_status
 from app.services.worker import queue_status
 
@@ -36,6 +37,7 @@ def status(user: User = Depends(security.get_current_user),
             "tier": "prototype",
         },
         "ocr": engine_status(),
+        "llm": llm_status(),
         "gis": layer().summary(),
         "cross_db": adapter_status(),
         "queue": queue_status(),

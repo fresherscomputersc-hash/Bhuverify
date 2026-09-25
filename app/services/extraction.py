@@ -845,6 +845,53 @@ def parse_boundary(raw_lines: list[str]) -> dict:
     return found
 
 
+def _parcel_rows_39a(raw_lines: list[str], taken: set[str] | None = None) -> list["SubPlot"]:
+    """Same-line plot + decimal-area pairs off an Odia parcel table."""
+    taken = taken or set()
+    found: list[SubPlot] = []
+    seen: set[str] = set()
+    for line in raw_lines:
+        plot_match = re.search(r"\b(\d{1,4}/\d{1,3})\b", line)
+        plot = ""
+        if plot_match and not _inside_date(line, plot_match):
+            plot = plot_match.group(1)
+        else:
+            for token in line.split():
+                token = token.strip("(),.:;-")
+                if not re.fullmatch(r"[0-9]{2,4}", token):
+                    continue
+                if token in taken:
+                    continue
+                if 1900 <= int(token) <= 2100:
+                    continue
+                if any(
+                    start <= line.find(token)
+                    and line.find(token) + len(token) <= end
+                    for start, end in (
+                        (m.start(), m.end()) for m in DATE_HINT.finditer(line)
+                    )
+                ):
+                    continue
+                plot = token
+                break
+        if not plot or plot in seen:
+            continue
+        area_match = re.search(r"\b(\d+\.\d+)\b", line)
+        if not area_match or _inside_date(line, area_match):
+            continue
+        area_value = float(area_match.group(1))
+        area_ha, _ok = to_hectare(area_value, "decimal")
+        seen.add(plot)
+        found.append(SubPlot(
+            khasra_no=plot,
+            area_value=area_value,
+            area_unit="decimal",
+            area_hectare=area_ha,
+            evidence_text=line.strip()[:200],
+        ))
+    return found
+
+
 # ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
@@ -1095,14 +1142,14 @@ def extract_fields(
         )
         unit = unit_match.group(2) if unit_match else ""
         if two_num and not unit:
-            # Rakaba tables print "0 0200" for 0.0200 hectare - a bare
-            # fraction with no unit letters. The unit comes from the
-            # evidence line (ରକବା/ହେକ୍ଟର/hectare context).
-            numeric = float(f"{two_num.group(1)}.{two_num.group(2)}")
-            ev = (area_field.evidence_text or "").lower()
-            if ("hectare" in ev or "ହେକ୍ଟର" in ev or "ରକବା" in ev
-                    or "rakaba" in ev):
-                unit = "hectare"
+            # Rakaba tables print acres and decimals in two columns:
+            #   ଏ. 0   ଡି. 0200   means 0 acre + 0200/100 = 2.00 decimal
+            # (ଡି. 0600 = 6 decimals, 5600 = 56 decimals). The value is kept
+            # in decimals; hectare conversion follows from the decimal unit.
+            acres = int(two_num.group(1))
+            decimals = int(two_num.group(2)) / 100.0
+            numeric = round(acres * 100 + decimals, 4)
+            unit = "decimal"
             area_field.normalized_value = str(numeric)
         else:
             try:
@@ -1135,7 +1182,6 @@ def extract_fields(
             area_hectare=child_ha,
             evidence_text=match.group(0)[:200],
         ))
-
     # ---- dedicated identifiers (khewat / khatiyan / tehsil-no) -----------
     # Verbatim, never mapped into canonical fields.
     dedicated: dict[str, FieldExtraction] = {}
@@ -1169,6 +1215,17 @@ def extract_fields(
         else:
             entry.status, entry.reason = "needs_review", "ocr_uncertain"
         dedicated[dedicated_name] = entry
+
+    if profile == DOC_PROFILE_ODISHA_39A:
+        # Odia parcel tables have no "sub plot" wording: a parcel row carries
+        # the plot number and its decimal area on the SAME line ("220 ...
+        # 19.00"). Only same-line pairs are taken - pairing across lines
+        # would be guessing. Rows the OCR fragmented stay for the reviewer.
+        taken_numbers = {
+            (dedicated.get(name).normalized_value if dedicated.get(name) else "")
+            for name in ("khewat_no", "khatiyan_no", "tehsil_no")
+        }
+        sub_plots.extend(_parcel_rows_39a(raw_lines, taken_numbers))
 
     # ---- bare-number plot fallback (Form 39-A page 2+, header lost) --------
     # Parcel tables often lose their header in OCR while the number survives

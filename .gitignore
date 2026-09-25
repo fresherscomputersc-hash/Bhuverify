@@ -6,8 +6,11 @@ venv/
 *.db
 *.db-shm
 *.db-wal
+.env
+GROQ_API_KEY*
 data/uploads/
 data/processed/
 data/samples/
 data/geojson/
 data/reports/
+bhuverify-key.pem

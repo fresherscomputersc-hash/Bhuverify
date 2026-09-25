@@ -11,7 +11,7 @@ pinned: false
 # BhuVerify
 
 **Intelligent Land Record Digitization and Validation System**
-Smart Hackathon problem statement **SIH26018** · Theme: Smart Automation · Team: **Merge Conflict**
+Smart Hackathon problem statement **SIH26018** · Theme: Smart Automation · Team: **Shadow Slayers**
 
 BhuVerify converts legacy land records — scanned registers, handwritten pages, PDFs and
 cadastral maps — into structured, validated, GIS-linked digital records. It is not an OCR
@@ -156,7 +156,7 @@ The prototype deliberately keeps the same contracts the later tiers need:
 python3 -m pytest tests/ -q
 ```
 
-**94 tests** (`python -m pytest tests/ -q`). They cover:
+**99 tests** (`python -m pytest tests/ -q`). They cover:
 
 - unit conversion and area normalisation across acre/hectare/decimal/bigha/katha/guntha/kanal/marla
 - field extraction on official layouts (NIC table-ROR, Hindi ROR, khatauni tables):

@@ -157,3 +157,35 @@ def test_bare_plot_number_on_later_page():
     assert outcome.fields["plot_no"].normalized_value == "417"
     # the khatiyan serial on the same page must not become the plot
     assert outcome.fields["plot_no"].normalized_value != "18"
+
+
+def test_rakaba_acres_and_decimals():
+    from app.services.extraction import extract_fields
+
+    text = ("Schedule I Form No.39-A\n"
+            "ମୌଜା : ଗୋଠବଣ\n"
+            "ରକବା 0 0200")
+    outcome = extract_fields(text, [], language="ori")
+    assert outcome.fields["area"].normalized_value == "2.0"
+    assert outcome.area_hectare == round(2 * 0.00404686, 6)
+
+
+def test_rakaba_one_acre_56_decimal():
+    from app.services.extraction import extract_fields
+
+    text = "ରକବା 1 5600"
+    outcome = extract_fields(text, [], language="ori")
+    assert outcome.fields["area"].normalized_value == "156.0"
+    assert outcome.area_hectare == round(156 * 0.00404686, 6)
+
+
+def test_parcel_rows_pair_plot_and_area():
+    from app.services.extraction import extract_fields
+
+    text = ("Schedule I Form No.39-A\n"
+            "220 19.00\n"
+            "221 10.00\n"
+            "24/09/2026")
+    outcome = extract_fields(text, [], language="ori", page=2)
+    pairs = {p.khasra_no: p.area_value for p in outcome.sub_plots}
+    assert pairs == {"220": 19.0, "221": 10.0}
