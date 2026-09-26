@@ -45,6 +45,10 @@ def _ensure_tesseract_on_path() -> str | None:
         r"C:\Program Files\Tesseract-OCR\tesseract.exe",
         r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
         os.path.join(os.environ.get("LOCALAPPDATA", ""), r"Programs\Tesseract-OCR\tesseract.exe"),
+        # Absolute Linux fallbacks: systemd units that override PATH to a
+        # venv-only value would otherwise blind `shutil.which` entirely.
+        "/usr/bin/tesseract",
+        "/usr/local/bin/tesseract",
     ]
     if not found:
         for cand in candidates:

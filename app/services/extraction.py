@@ -349,7 +349,8 @@ def _table_cell_fallback(raw_lines: list[str]) -> dict:
         idx = line.find(token)
         if idx < 0:
             return False
-        for start, end in DATE_HINT.finditer(line):
+        for date_match in DATE_HINT.finditer(line):
+            start, end = date_match.span()
             if start <= idx and idx + len(token) <= end:
                 return True
         return False

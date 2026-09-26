@@ -1,7 +1,7 @@
 """Unit conversion and area normalisation (SRS FR-4 helper)."""
 import pytest
 
-from app.services.extraction import normalize_unit, to_hectare
+from app.services.extraction import extract_fields, normalize_unit, to_hectare
 
 
 @pytest.mark.parametrize(
@@ -42,3 +42,14 @@ def test_normalize_unit_indic():
     ha, ok = to_hectare(2.0, "एकड़")
     assert ok is True
     assert ha == pytest.approx(2 * 0.404686, rel=1e-4)
+
+
+def test_table_row_with_date_does_not_crash():
+    """A date inside a table data row must not crash cell fallback."""
+    text = (
+        "Owner Name | Relation | Khasra No | Khata | Area\n"
+        "1 Ramesh Sahoo | S/o Balaram | 118/2 | 204 | 1.50\n"
+        "2 Minati Sahu | D/o Hari | 118/4 | 205 | 0.75 | 22/11/2020"
+    )
+    out = extract_fields(text, [], profile="generic")
+    assert out.fields["khasra_no"].normalized_value in ("118/2", "118/4")
