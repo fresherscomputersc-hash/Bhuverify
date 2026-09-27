@@ -14,3 +14,7 @@ data/samples/
 data/geojson/
 data/reports/
 bhusure-key.pem
+# SSH private keys - never commit
+bhuverify-key.pem
+bhusure-key.pem
+*.pem
