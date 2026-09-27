@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Builds the judge-facing pitch deck for BhuVerify (SIH26018).
+Builds the judge-facing pitch deck for BhuSure (SIH26018).
 
 Every quantitative claim in this deck is read from the live API at build time
-(`BHUVERIFY_API`, default http://localhost:8000) so the slides cannot drift
+(`BHUSURE_API`, default http://localhost:8000) so the slides cannot drift
 away from what the prototype actually does. If the API is unreachable the build
 fails loudly rather than silently printing stale numbers.
 
@@ -26,8 +26,8 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Emu, Inches, Pt
 
-API = os.getenv("BHUVERIFY_API", "http://localhost:8000")
-OUT = Path(__file__).resolve().parent.parent / "BhuVerify_SIH26018_Pitch_Deck.pptx"
+API = os.getenv("BHUSURE_API", "http://localhost:8000")
+OUT = Path(__file__).resolve().parent.parent / "BhuSure_SIH26018_Pitch_Deck.pptx"
 PAGE_BOTTOM = Inches(6.95)  # nothing may be placed below this line
 
 # --- palette: Government of India theme ------------------------------------
@@ -154,7 +154,7 @@ def header(s, title, subtitle=None, kicker=None):
         text(s, 0.6, 0.86, 11.9, 0.3, subtitle, size=12, color=INK_3)
 
 
-def footer(s, page, note="BhuVerify · SIH26018 · Team Shadow Slayers"):
+def footer(s, page, note="BhuSure · SIH26018 · Team Shadow Slayers"):
     text(s, 0.6, 7.05, 9, 0.25, note, size=9, color=INK_3)
     text(s, 11.8, 7.05, 1, 0.25, str(page), size=9, color=INK_3, align=PP_ALIGN.RIGHT)
 
@@ -223,14 +223,14 @@ def s01_title(prs, m):
         {"text": "Shadow Slayers", "size": 15, "color": WHITE, "bold": True},
     ])
 
-    text(s, 5.3, 1.75, 7.4, 1.2, "BhuVerify", size=58, color=WHITE, bold=True)
+    text(s, 5.3, 1.75, 7.4, 1.2, "BhuSure", size=58, color=WHITE, bold=True)
     text(s, 5.3, 2.85, 7.3, 0.9,
          "Intelligent Land Record Digitization and Validation System",
          size=17, color=RGBColor(0xC9, 0xE4, 0xDB))
     rect(s, 5.3, 3.62, 1.5, 0.045, GOLD)
 
     text(s, 5.3, 3.95, 7.2, 1.4,
-         "Not just OCR. BhuVerify reads legacy land records, validates them against "
+         "Not just OCR. BhuSure reads legacy land records, validates them against "
          "ten named business rules, links them to cadastral maps, and keeps every AI "
          "decision auditable — while a government officer holds final authority.",
          size=13.5, color=RGBColor(0xD8, 0xEC, 0xE5))
@@ -292,11 +292,11 @@ def s02_problem(prs, m):
 
 def s03_solution(prs, m):
     s = slide(prs)
-    header(s, "What BhuVerify is — and what it deliberately is not",
+    header(s, "What BhuSure is — and what it deliberately is not",
            "A human-in-the-loop decision-support system, not an autonomous land registry.",
            "Solution")
 
-    h1 = panel(s, 0.6, 1.5, 6.0, "BhuVerify does", [
+    h1 = panel(s, 0.6, 1.5, 6.0, "BhuSure does", [
         "Digitise — scans, handwriting, PDFs and map images",
         "Extract — 19 structured fields with per-field confidence",
         "Validate — ten named business rules with evidence",
@@ -304,7 +304,7 @@ def s03_solution(prs, m):
         "Cross-check — Bhulekh, BhuNaksha, IGR, LGD and LRMS",
     ], size=11.5)
 
-    panel(s, 0.6, 1.5 + h1 + 0.2, 6.0, "BhuVerify does not", [
+    panel(s, 0.6, 1.5 + h1 + 0.2, 6.0, "BhuSure does not", [
         "Adjudicate — disputes are flagged, never resolved by AI",
         "Change ownership — no autonomous title transfer, ever",
         "Write back — not without formal approval of each system",
@@ -321,7 +321,7 @@ def s03_solution(prs, m):
         {"text": "Land records are legally sensitive. An AI that quietly approves a wrong "
                  "owner is worse than no AI at all.", "size": 12.5, "color": INK_2},
         {"text": " ", "size": 6},
-        {"text": "So BhuVerify scores its own uncertainty, names the rule each finding came "
+        {"text": "So BhuSure scores its own uncertainty, names the rule each finding came "
                  "from, and refuses to let a critical finding be approved past. The officer "
                  "sees the source image beside every extracted value and decides.",
          "size": 12.5, "color": INK_2},
@@ -678,7 +678,7 @@ def s12_close(prs, m):
     rect(s, 0, 0, 13.333, 7.5, BRAND)
     rect(s, 0.6, 0.9, 1.4, 0.045, GOLD)
 
-    text(s, 0.6, 1.25, 12, 0.9, "BhuVerify", size=48, color=WHITE, bold=True)
+    text(s, 0.6, 1.25, 12, 0.9, "BhuSure", size=48, color=WHITE, bold=True)
     text(s, 0.6, 2.25, 11.5, 1.4,
          "We did not build an OCR demo. We built the verification layer that sits "
          "between a scanned register and a land record a citizen can rely on.",

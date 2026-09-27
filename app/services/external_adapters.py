@@ -174,7 +174,7 @@ def check_lrms(khasra_no: str, khata_no: str) -> ExternalCheck:
     return ExternalCheck(
         "lrms", MODE, "matched", "low", f"lrms://khata/{khata_no or 'unknown'}/{khasra_no or 'unknown'}",
         f"LRMS accepts khata {khata_no or '(blank)'} / khasra {khasra_no or '(blank)'}; current DILRMP "
-        f"state '{state}'. BhuVerify output is API-ready for write-back once approval is granted.",
+        f"state '{state}'. BhuSure output is API-ready for write-back once approval is granted.",
         {"khata_no": khata_no, "khasra_no": khasra_no, "dilrmp_state": state,
          "write_back_authorised": False}, latency,
     )

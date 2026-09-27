@@ -1,7 +1,7 @@
-"""Pytest bootstrap for BhuVerify.
+"""Pytest bootstrap for BhuSure.
 
 Sets an isolated SQLite database BEFORE any app import (app.database reads
-BHUVERIFY_DB at import time), ensures Tesseract is findable on Windows, and
+BHUSURE_DB at import time), ensures Tesseract is findable on Windows, and
 provides per-test DB sessions with all tables created.
 """
 import os
@@ -9,11 +9,11 @@ import tempfile
 from pathlib import Path
 
 # --- isolated DB: must precede `import app.*` -------------------------------
-_tmp = tempfile.NamedTemporaryFile(prefix="bhuverify_test_", suffix=".db", delete=False)
+_tmp = tempfile.NamedTemporaryFile(prefix="bhusure_test_", suffix=".db", delete=False)
 _tmp.close()
-os.environ["BHUVERIFY_DB"] = f"sqlite:///{_tmp.name}"
-os.environ["BHUVERIFY_SKIP_SEED"] = "1"
-os.environ["BHUVERIFY_SECRET"] = "test-secret"
+os.environ["BHUSURE_DB"] = f"sqlite:///{_tmp.name}"
+os.environ["BHUSURE_SKIP_SEED"] = "1"
+os.environ["BHUSURE_SECRET"] = "test-secret"
 
 # --- Tesseract on Windows ----------------------------------------------------
 import shutil  # noqa: E402

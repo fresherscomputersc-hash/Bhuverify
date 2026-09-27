@@ -1,5 +1,5 @@
 ---
-title: BhuVerify
+title: BhuSure
 emoji: 🗺️
 colorFrom: green
 colorTo: blue
@@ -8,12 +8,12 @@ app_port: 7860
 pinned: false
 ---
 
-# BhuVerify
+# BhuSure
 
 **Intelligent Land Record Digitization and Validation System**
 Smart Hackathon problem statement **SIH26018** · Theme: Smart Automation · Team: **Shadow Slayers**
 
-BhuVerify converts legacy land records — scanned registers, handwritten pages, PDFs and
+BhuSure converts legacy land records — scanned registers, handwritten pages, PDFs and
 cadastral maps — into structured, validated, GIS-linked digital records. It is not an OCR
 wrapper: the pipeline runs computer-vision preprocessing, printed OCR and handwritten
 recognition, structured field extraction with field-level confidence, ten named business
@@ -208,7 +208,7 @@ app/
 static/                   console (index.html, css, js) — no build step
 tests/                    101 tests
 tools/build_deck.py       regenerates the pitch deck from live API data
-BhuVerify_SIH26018_Pitch_Deck.pptx   judge-facing deck (12 slides)
+BhuSure_SIH26018_Pitch_Deck.pptx   judge-facing deck (12 slides)
 docs/                     reserved for the team's PRD / SRS source documents
 ```
 
@@ -216,7 +216,7 @@ docs/                     reserved for the team's PRD / SRS source documents
 
 ## Legal position
 
-BhuVerify is decision support. It does not adjudicate disputes, does not change ownership,
+BhuSure is decision support. It does not adjudicate disputes, does not change ownership,
 and does not write back to Bhulekh, BhuNaksha, IGR or LRMS. Discrepancies are flagged, not
 resolved. Every record requires approval by an authorised reviewer, and every correction is
 audit-logged. Write-back would require formal government approval.

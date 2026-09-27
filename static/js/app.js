@@ -1,4 +1,4 @@
-/* BhuVerify prototype console.
+/* BhuSure prototype console.
  *
  * Vanilla JS + hash router, no build step and no external dependencies, so the
  * app runs unchanged inside the sandboxed preview iframe (which has no network
@@ -9,7 +9,7 @@
 
   const API = "/api/v1";
   const state = {
-    token: localStorage.getItem("bhuverify_token") || "",
+    token: localStorage.getItem("bhusure_token") || "",
     user: null,
     system: null,
     pending: [],
@@ -134,11 +134,11 @@
         });
         state.token = data.token;
         state.user = data.user;
-        localStorage.setItem("bhuverify_token", data.token);
+        localStorage.setItem("bhusure_token", data.token);
         // Mirror the token into a cookie: <img> tags (document previews)
         // cannot send Authorization headers, but the API also accepts the
-        // bhuverify_token cookie (see security._extract_token).
-        document.cookie = "bhuverify_token=" + data.token + "; Path=/; SameSite=Lax";
+        // bhusure_token cookie (see security._extract_token).
+        document.cookie = "bhusure_token=" + data.token + "; Path=/; SameSite=Lax";
         await bootShell();
       } catch (err) {
         box.textContent = err.message;
@@ -178,8 +178,8 @@
     if (state.token && !silent) api("/auth/logout", { method: "POST" }).catch(() => {});
     state.token = "";
     state.user = null;
-    localStorage.removeItem("bhuverify_token");
-    document.cookie = "bhuverify_token=; Path=/; Max-Age=0";
+    localStorage.removeItem("bhusure_token");
+    document.cookie = "bhusure_token=; Path=/; Max-Age=0";
     renderLogin();
     if (!silent) toast("Signed out.");
   }
@@ -209,8 +209,8 @@
       state.user = await api("/auth/me");
     } catch (err) {
       state.token = "";
-      localStorage.removeItem("bhuverify_token");
-      document.cookie = "bhuverify_token=; Path=/; Max-Age=0";
+      localStorage.removeItem("bhusure_token");
+      document.cookie = "bhusure_token=; Path=/; Max-Age=0";
       renderLogin();
       return;
     }
@@ -431,7 +431,7 @@
 
     wrap.appendChild(panel("How to read this screen", null, [
       el("p", { class: "small muted" }, [
-        "BhuVerify automates digitization and validation but never approves a record by itself. ",
+        "BhuSure automates digitization and validation but never approves a record by itself. ",
         "Every figure above is computed live from the repository - upload a new document and the counts move. ",
         "Records reach the verified repository only after a reviewer approves them, and every AI output and human ",
         "correction is written to an immutable, hash-chained audit trail (see the Audit Trail tab).",

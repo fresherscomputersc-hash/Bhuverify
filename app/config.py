@@ -1,5 +1,5 @@
 """
-BhuVerify - application configuration.
+BhuSure - application configuration.
 
 Central place for every tunable the prototype exposes. Values here map 1:1 to
 the targets published in the SRS (sections 7.1 Performance, 5.2 Technology
@@ -18,7 +18,7 @@ PROCESSED_DIR = DATA_DIR / "processed"     # CV-enhanced images / region crops
 GEOJSON_DIR = DATA_DIR / "geojson"         # sample cadastral layer (FR-9)
 REPORTS_DIR = DATA_DIR / "reports"         # exported MIS reports
 STATIC_DIR = BASE_DIR / "static"
-DB_PATH = DATA_DIR / "bhuverify.db"
+DB_PATH = DATA_DIR / "bhusure.db"
 
 for _d in (DATA_DIR, UPLOAD_DIR, PROCESSED_DIR, GEOJSON_DIR, REPORTS_DIR):
     _d.mkdir(parents=True, exist_ok=True)
@@ -53,7 +53,7 @@ class Settings:
     PERF_VALIDATION_BUDGET_S: float = PERF_VALIDATION_BUDGET_S
     PERF_SEARCH_BUDGET_S: float = PERF_SEARCH_BUDGET_S
 
-    app_name: str = "BhuVerify"
+    app_name: str = "BhuSure"
     app_subtitle: str = "Intelligent Land Record Digitization and Validation System"
     problem_statement: str = "SIH26018"
     theme: str = "Smart Automation"
@@ -61,7 +61,7 @@ class Settings:
     version: str = "0.1.0-prototype"
 
     database_url: str = field(
-        default_factory=lambda: os.getenv("BHUVERIFY_DB", f"sqlite:///{DB_PATH}")
+        default_factory=lambda: os.getenv("BHUSURE_DB", f"sqlite:///{DB_PATH}")
     )
 
     # OCR languages enabled in this deployment (SRS FR-3). Land-record pages
@@ -87,7 +87,7 @@ class Settings:
     # Security
     token_ttl_minutes: int = 480
     session_secret: str = field(
-        default_factory=lambda: os.getenv("BHUVERIFY_SECRET", "prototype-only-secret")
+        default_factory=lambda: os.getenv("BHUSURE_SECRET", "prototype-only-secret")
     )
 
     # Continuous learning

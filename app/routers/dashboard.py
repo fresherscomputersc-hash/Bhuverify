@@ -49,7 +49,7 @@ def export_csv(user: User = Depends(security.require("dashboard:export")),
     data = dashboard(db)
     buffer = io.StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(["BhuVerify MIS export", settings.district, settings.state,
+    writer.writerow(["BhuSure MIS export", settings.district, settings.state,
                      datetime.now(timezone.utc).isoformat()])
     writer.writerow([])
     writer.writerow(["section", "metric", "value"])
@@ -68,7 +68,7 @@ def export_csv(user: User = Depends(security.require("dashboard:export")),
                 writer.writerow([section, metric, value])
 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    path = REPORTS_DIR / f"bhuverify_mis_{stamp}.csv"
+    path = REPORTS_DIR / f"bhusure_mis_{stamp}.csv"
     path.write_text(buffer.getvalue(), encoding="utf-8")
 
     buffer.seek(0)

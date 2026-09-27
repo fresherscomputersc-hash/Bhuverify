@@ -1,0 +1,32 @@
+{
+  "hin_01_up_khatauni.png": {
+    "profile": "up_khatauni",
+    "village": "रामपुर",
+    "khata_no": "45",
+    "plot_no": "118",
+    "owner_name": "रमेश कुमार",
+    "expect": "up_khatauni profile; Gata->plot_no; honorific stripped"
+  },
+  "hin_02_mp_khasra.jpg": {
+    "profile": "mp_khasra",
+    "khasra_no": "227/1",
+    "owner_name": "सुनीता प्रधान",
+    "expect": "mp_khasra profile; deskew recovers 5deg; पति alias"
+  },
+  "hin_03_handwritten_register.png": {
+    "khasra_no": "512/3",
+    "owner_name": "मिनाती साहू",
+    "expect": "HTR path + hin second pass; Devanagari not read as Odia"
+  },
+  "hin_04_bihar_khatiyan.png": {
+    "profile": "bihar_khatiyan",
+    "khata_no": "12",
+    "owner_name": "गीता देवी",
+    "expect": "bihar profile via anchal; अंचल alias; honorific stripped"
+  },
+  "hin_05_mutation.png": {
+    "previous_owner": "रमेश कुमार",
+    "new_owner": "सुरेश कुमार",
+    "expect": "BR-5 chain; Hindi mutation aliases; parties via NER"
+  }
+}

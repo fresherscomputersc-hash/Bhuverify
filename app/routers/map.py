@@ -18,7 +18,7 @@ def full_layer(user: User = Depends(security.require("map:read"))):
     cadastral = layer()
     return {
         "type": "FeatureCollection",
-        "name": "bhuverify_sample_cadastral",
+        "name": "bhusure_sample_cadastral",
         "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:OGC:1.3:CRS84"}},
         "features": cadastral.all_features(),
         "summary": cadastral.summary(),

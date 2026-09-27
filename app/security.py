@@ -122,7 +122,7 @@ def destroy_session(db: Session, token: str) -> None:
 def _extract_token(request: Request, authorization: str | None) -> str | None:
     if authorization and authorization.lower().startswith("bearer "):
         return authorization.split(" ", 1)[1].strip()
-    return request.cookies.get("bhuverify_token")
+    return request.cookies.get("bhusure_token")
 
 
 def get_current_user(

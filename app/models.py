@@ -1,5 +1,5 @@
 """
-BhuVerify data model.
+BhuSure data model.
 
 Entity set is taken directly from SRS section 6.1 (Core Entities):
 SourceDocument, LandRecord, Owner, ExtractionResult, MutationRecord,

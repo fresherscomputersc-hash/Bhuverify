@@ -1,0 +1,53 @@
+############### SLIDE 1
+SMART INDIA HACKATHON 2026
+
+Problem Statement ID SIH26018
+Problem Statement Title - BhuSure: Intelligent Land Record Digitization and Validation System
+Theme - Smart Automation
+PS Category - Software
+Team ID -
+Team Shadow Slayers
+
+############### SLIDE 2
+BhuSure: Intelligent Land Record Digitization & Validation
+
+What it is: converts scanned registers, handwritten pages, PDFs and cadastral maps into structured, validated, GIS-linked digital records.
+How it works: CV preprocessing ? OCR/HTR with word confidence ? 17-field extraction (6 doc profiles) ? confidence fusion ? GIS linking ? ten business rules BR-1?BR-10 ? cross-database checks.
+Human in command: a government reviewer holds final authority; approval is server-refused (HTTP 409) while critical findings are open.
+No hallucinations: anti-hallucination contracts (plot 417 is not a khasra; khatiyan 18 is not a khata); every AI output audit-logged in a SHA-256 hash chain.
+Proven, not claimed: 165 tests green, 26 documents exercised, 15/15 byte-identical reruns, 36.8% field accuracy on an adversarial set ? all routed to review, zero crashes.
+
+############### SLIDE 3
+TECHNICAL APPROACH
+
+Stack: FastAPI ? SQLAlchemy ? OpenCV ? Tesseract 5.5 (eng+hin+ori) ? Shapely ? rapidfuzz ? argon2; vanilla JS, no build step, runs network-isolated.
+Pilot AI tier (flag-gated): Groq LLM (gpt-oss-120b), spaCy NER, HF transformers (XLM-R) as verifiers that never overwrite trusted values.
+Method: upload ? deskew/denoise/layout ? script-routed OCR (39-A?Oriya, Hindi belt?Hindi) ? label-alias + regex extraction ? 0.45/0.30/0.15/0.10 confidence fusion.
+Validation: BR-1?BR-10, duplicate detection, Bhulekh/BhuNaksha/IGR/LGD/LRMS adapters (mocked now, live-ready contracts).
+Growth path: SQLite?PostGIS, Tesseract?TrOCR/IndicHTR, OpenCV?YOLO/Detectron2 ? same interfaces, no rewrites.
+
+############### SLIDE 4
+FEASIBILITY AND VIABILITY
+
+Proven feasible: 165 tests (168 on EC2) green; 26 docs incl. 5 real Bhulekh RoRs; Tesseract 5.5 verified with hin/ori packs.
+Measured: 79?84% OCR on real scans; validation < 1 s/record; 15?127 s/doc on a 2-vCPU box (10 s budget needs production hardware).
+Risk ? garbled OCR: script-routed second pass + confidence bands; anything < 70% goes to mandatory human review.
+Risk ? invented data: prohibited-field contracts per doc type; reviewers, never the AI, close a record.
+Risk ? privacy: decision support only ? no ownership changes, no write-back to government systems without approval.
+
+############### SLIDE 5
+IMPACT AND BENEFITS
+
+Revenue officers: reviewer queue, one-click corrections captured as training data, approve/reject/escalate with full evidence.
+Auditors & supervisors: tamper-evident hash-chained trail with re-verify, MIS dashboard (accuracy, pendency, error stats, state-wise progress) plus CSV export.
+Administration: digitization % and review-completion tracked live; discrepancies flagged, never silently resolved.
+Governance: reliable digital records from legacy pages; transparent, data-driven land administration.
+Reach: Odisha 39-A, UP Khatauni, MP Khasra, Bihar Khatiyan profiles live; more states plug into the same profile system.
+
+############### SLIDE 6
+RESEARCH  AND REFERENCES
+
+OCR & language: Tesseract 5.5; spaCy NER; Hugging Face transformers (XLM-R, TrOCR); Indic language packs.
+Vision & GIS roadmap: YOLO / Detectron2 for layout; GeoServer + PostGIS for cadastral serving.
+Government systems: Bhulekh, BhuNaksha, IGR, LGD, DILRMP, LRMS ? adapters contracted, awaiting live endpoints.
+Statement & code: SIH26018, Ministry of Rural Development; repo: https://github.com/fresherscomputersc-hash/BHOOMI.

@@ -1,4 +1,4 @@
-name: Deploy BhuVerify to AWS
+name: Deploy BhuSure to AWS
 
 on:
   push:
@@ -31,10 +31,10 @@ jobs:
             echo "Installing dependencies..."
             pip install -r requirements.txt
 
-            echo "Restarting BhuVerify..."
-            sudo systemctl restart bhuverify
+            echo "Restarting BhuSure..."
+            sudo systemctl restart bhusure
 
             echo "Checking service..."
-            sudo systemctl is-active --quiet bhuverify
+            sudo systemctl is-active --quiet bhusure
 
-            echo "BhuVerify deployment successful!"
+            echo "BhuSure deployment successful!"

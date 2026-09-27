@@ -1,5 +1,5 @@
 """
-BhuVerify - FastAPI application entry point.
+BhuSure - FastAPI application entry point.
 
 Serves the REST API (SRS FR-17) and the single-page reviewer/manager console.
 On first boot it creates the schema, seeds the demo dataset described in SRS

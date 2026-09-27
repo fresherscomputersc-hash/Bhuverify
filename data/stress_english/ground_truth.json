@@ -1,0 +1,27 @@
+{
+  "eng_01_clean_ror.png": {
+    "khasra_no": "118/2",
+    "owner_name": "Prafulla Kumar Sahoo",
+    "expect": "near-full extraction, high confidence"
+  },
+  "eng_02_degraded.jpg": {
+    "khasra_no": "512/3",
+    "owner_name": "Minati Sahu",
+    "expect": "deskew recovers 6deg; confidence medium, review-bound"
+  },
+  "eng_03_sale_deed.png": {
+    "previous_owner": "Anonymous Trust",
+    "new_owner": "Sunita Pradhan",
+    "registration_no": "876/2021",
+    "expect": "vendor/purchaser parties; BR-10 registration format"
+  },
+  "eng_04_table_khatauni.png": {
+    "owner_name": "Ramesh Chandra Behera",
+    "khasra_no": "340",
+    "expect": "table-row owner + cell identifiers, no label anchoring"
+  },
+  "eng_05_stamp_missing_tehsil.png": {
+    "khasra_no": "227/1",
+    "expect": "BR-7 hierarchy flags missing tehsil; stamp ignored"
+  }
+}

@@ -760,7 +760,7 @@ def ensure_worker() -> None:
     global _WORKER
     with _LOCK:
         if _WORKER is None or not _WORKER.is_alive():
-            _WORKER = threading.Thread(target=_worker_loop, name="bhuverify-worker", daemon=True)
+            _WORKER = threading.Thread(target=_worker_loop, name="bhusure-worker", daemon=True)
             _WORKER.start()
 
 

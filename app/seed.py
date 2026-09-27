@@ -289,15 +289,15 @@ def already_seeded() -> bool:
 def ensure_seeded() -> dict:
     """Idempotent boot-time seeding: only runs when the repository is empty.
 
-    Set BHUVERIFY_SKIP_SEED=1 to suppress it - the test-suite does, so that
+    Set BHUSURE_SKIP_SEED=1 to suppress it - the test-suite does, so that
     uploads of the sample files are not rejected as duplicate hashes.
     """
     import os
 
     init_db()
     geojson = seed_geojson()
-    if os.getenv("BHUVERIFY_SKIP_SEED") == "1":
-        return {"seeded": False, "reason": "seeding suppressed (BHUVERIFY_SKIP_SEED)", "geojson": str(geojson)}
+    if os.getenv("BHUSURE_SKIP_SEED") == "1":
+        return {"seeded": False, "reason": "seeding suppressed (BHUSURE_SKIP_SEED)", "geojson": str(geojson)}
     if already_seeded():
         return {"seeded": False, "reason": "repository already populated", "geojson": str(geojson)}
     users = seed_users()

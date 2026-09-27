@@ -1,4 +1,4 @@
-# BhuVerify - SIH26018
+# BhuSure - SIH26018
 # Intelligent Land Record Digitization and Validation System
 #
 # Prototype tier (P) dependencies.
